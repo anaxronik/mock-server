@@ -1,9 +1,33 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const readFilesRecursively = require("./getRoutes");
+const fsPromises = require("fs").promises;
+
 const app = express();
 const port = 3000;
+
+async function readFilesRecursively(dir, rootDir) {
+  let files = await fsPromises.readdir(dir, { withFileTypes: true });
+  let allFiles = [];
+
+  for (let file of files) {
+    let filePath = path.join(dir, file.name);
+    if (file.isDirectory()) {
+      allFiles = allFiles.concat(await readFilesRecursively(filePath, rootDir));
+    } else {
+      const shortPath = filePath.replace(rootDir, "");
+
+      allFiles.push({
+        path: shortPath,
+        fullPath: filePath,
+        name: file.name,
+        url: shortPath.substring(0, shortPath.lastIndexOf("/")),
+        method: file.name.split(".")[0],
+      });
+    }
+  }
+  return allFiles;
+}
 
 readFilesRecursively("./src/routes", "src/routes").then((files) => {
   files?.forEach((file) => {
